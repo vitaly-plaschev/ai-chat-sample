@@ -1,7 +1,7 @@
 import { Modal, List, Button, Form, Input, Typography, Space, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { usePrompts, useCreatePrompt } from '../hooks/usePrompts';
-import { Prompt } from '../types';
+import { type Prompt } from '../types';
 
 const { Text } = Typography;
 
