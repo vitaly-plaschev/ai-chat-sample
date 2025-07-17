@@ -21,7 +21,7 @@ $ npm run start
 # Start frontend client    
 $ cd client   
 $ npm install   
-$ npm run start   
+$ npm run dev   
 
 
     
