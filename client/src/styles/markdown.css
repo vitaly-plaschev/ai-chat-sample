@@ -1,0 +1,60 @@
+/* Add these styles to your existing markdown.css */
+
+.code-block-container {
+  position: relative;
+  margin: 16px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #2d2d2d;
+  color: #f0f0f0;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 14px;
+}
+
+.language-tag {
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.copy-button {
+  color: #aaa;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.copy-button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.copy-button .anticon {
+  font-size: 14px;
+}
+
+pre {
+  margin: 0 !important;
+  padding: 16px !important;
+  background: #1e1e1e !important;
+  border-radius: 0 !important;
+  overflow-x: auto;
+}
+
+pre code {
+  padding: 0 !important;
+  background: transparent !important;
+}
