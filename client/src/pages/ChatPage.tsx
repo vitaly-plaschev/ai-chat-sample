@@ -13,7 +13,7 @@ function ChatPage() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Layout style={{ minHeight: '100vh' }}>
+      <Layout>
         <Sider width={350} style={{ background: '#fff' }}>
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>            
             <ChatList onSelectChat={setSelectedChatId} />
