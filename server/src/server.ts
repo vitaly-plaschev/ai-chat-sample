@@ -223,7 +223,7 @@ app.post('/api/chats/:id/prompt', async (req, res) => {
     const response = await axiosInstance.post(
       process.env.GIGACHAT_API_URL!,
       {
-        model: 'GigaChat',
+        model: chat.settings.model || 'GigaChat',
         messages,
         temperature: chat.settings.temperature || 0.7,
         max_tokens: chat.settings.maxTokens || 1000

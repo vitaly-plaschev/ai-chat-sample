@@ -76,7 +76,7 @@ async function createNewChat(title: string): Promise<Chat> {
     title,
     createdAt: new Date(),
     messages: [],
-    settings: { temperature: 0.7, maxTokens: 1000, model: "Giga" },
+    settings: { temperature: 0.7, maxTokens: 1000, model: "GigaChat" },
   };
 
   db.data?.chats.push(newChat);
