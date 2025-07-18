@@ -51,3 +51,13 @@ export const sendPromptToChat = async (chatId: string, content: string) => {
   const response = await axios.post(`${API_URL}/chats/${chatId}/prompt`, { content });
   return response.data;
 };
+
+export const updateChatTitle = async (chatId: string, title: string) => {
+  const response = await axios.put(`${API_URL}/chats/${chatId}`, { title });
+  return response.data;
+};
+
+export const deleteChat = async (chatId: string) => {
+  const response = await axios.delete(`${API_URL}/chats/${chatId}`);
+  return response.data;
+};

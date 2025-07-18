@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import {
   List,
   Typography,
@@ -9,14 +8,24 @@ import {
   Input,
   Dropdown,
   Button,
-  message,
+  Popconfirm,
+  type InputRef,
 } from "antd";
-import { SendOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  SendOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CheckOutlined,
+  CloseOutlined,
+} from "@ant-design/icons";
 import {
   useChat,
   useSendMessage,
   useChats,
   useCreateChat,
+  useUpdateChatTitle,
+  useDeleteChat,
 } from "../hooks/useChats";
 import { usePrompts } from "../hooks/usePrompts";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,16 +33,20 @@ import MarkdownRenderer from "../components/MarkdownRenderer";
 
 const { Text } = Typography;
 
-const ChatPageNew = () => {
+const ChatPage = () => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [newChatTitle, setNewChatTitle] = useState("");
+  const inputRef = useRef<InputRef>(null);
   const { data: chats, isLoading: isChatsLoading } = useChats();
   const { data: chat, isLoading: isChatLoading } = useChat(
     selectedChatId || ""
   );
   const sendMessage = useSendMessage(selectedChatId || "");
   const createChat = useCreateChat();
+  const updateTitle = useUpdateChatTitle();
+  const deleteChat = useDeleteChat();
   const [message, setMessage] = useState("");
   const { data: prompts } = usePrompts();
 
@@ -44,16 +57,12 @@ const ChatPageNew = () => {
     }
   }, [chats, selectedChatId]);
 
+  // Focus input when editing
   useEffect(() => {
-    const handleFocus = () => {
-      if (selectedChatId) {
-        queryClient.invalidateQueries({ queryKey: ["chat", selectedChatId] });
-      }
-    };
-
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
-  }, [selectedChatId, queryClient]);
+    if (editingChatId && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editingChatId]);
 
   const promptItems = prompts?.map((prompt) => ({
     key: prompt.id,
@@ -68,7 +77,7 @@ const ChatPageNew = () => {
       await sendMessage.mutateAsync(message);
       setMessage("");
     } catch (error) {
-      message.error("Failed to send message");
+      console.error("Failed to send message : ", error);
     }
   };
 
@@ -78,15 +87,66 @@ const ChatPageNew = () => {
         `New Chat ${new Date().toLocaleTimeString()}`
       );
       setSelectedChatId(newChat.id);
-      message.success("New chat created");
     } catch (error) {
-      message.error("Failed to create new chat");
+      console.error("Failed to create new chat : ", error);
     }
   };
 
+  const startEditing = (chatId: string, title: string) => {
+    setEditingChatId(chatId);
+    setNewChatTitle(title);
+  };
+
+  const cancelEditing = () => {
+    setEditingChatId(null);
+    setNewChatTitle("");
+  };
+
+  const saveTitle = async (chatId: string) => {
+    if (!newChatTitle.trim()) {
+      return;
+    }
+
+    try {
+      await updateTitle.mutateAsync({ chatId, title: newChatTitle });
+      setEditingChatId(null);
+      setNewChatTitle("");
+    } catch (error) {
+      console.error("Failed to update chat title : ", error);
+    }
+  };
+
+  const handleDeleteChat = async (chatId: string) => {
+    try {
+      await deleteChat.mutateAsync(chatId);
+
+      // Select a new chat if the current one was deleted
+      if (selectedChatId === chatId) {
+        const remainingChats = chats?.filter((c) => c.id !== chatId) || [];
+        setSelectedChatId(
+          remainingChats.length > 0 ? remainingChats[0].id : null
+        );
+      }
+    } catch (error) {
+      console.error("Failed to delete chat : ", error);
+    }
+  };
+
+  // Add real-time updates effect
+  useEffect(() => {
+    const handleFocus = () => {
+      if (selectedChatId) {
+        queryClient.invalidateQueries({ queryKey: ["chat", selectedChatId] });
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [selectedChatId, queryClient]);
+
   return (
     <div style={{ display: "flex", height: "100%" }}>
-      <div style={{ width: "250px", marginRight: "24px" }}>
+      <div style={{ width: "350px", marginRight: "24px" }}>
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -102,24 +162,83 @@ const ChatPageNew = () => {
           dataSource={chats}
           renderItem={(chat) => (
             <List.Item
-              onClick={() => setSelectedChatId(chat.id)}
               style={{
                 cursor: "pointer",
                 background:
                   selectedChatId === chat.id ? "#e6f7ff" : "transparent",
                 padding: "8px",
                 borderRadius: "4px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              <Text
-                ellipsis
-                style={{
-                  fontWeight: selectedChatId === chat.id ? "bold" : "normal",
-                  color: selectedChatId === chat.id ? "#1890ff" : "inherit",
-                }}
-              >
-                {chat.title}
-              </Text>
+              {editingChatId === chat.id ? (
+                <div style={{ display: "flex", width: "100%" }}>
+                  <Input
+                    ref={inputRef}
+                    value={newChatTitle}
+                    onChange={(e) => setNewChatTitle(e.target.value)}
+                    onPressEnter={() => saveTitle(chat.id)}
+                    style={{ flex: 1, marginRight: 8 }}
+                  />
+                  <Button
+                    type="text"
+                    icon={<CheckOutlined />}
+                    onClick={() => saveTitle(chat.id)}
+                  />
+                  <Button
+                    type="text"
+                    icon={<CloseOutlined />}
+                    onClick={cancelEditing}
+                  />
+                </div>
+              ) : (
+                <div
+                  style={{ flex: 1 }}
+                  onClick={() => setSelectedChatId(chat.id)}
+                >
+                  <Text
+                    ellipsis
+                    style={{
+                      fontWeight:
+                        selectedChatId === chat.id ? "bold" : "normal",
+                      color: selectedChatId === chat.id ? "#1890ff" : "inherit",
+                    }}
+                  >
+                    {chat.title}
+                  </Text>
+                </div>
+              )}
+
+              {editingChatId !== chat.id && (
+                <Space>
+                  <Button
+                    type="text"
+                    icon={<EditOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEditing(chat.id, chat.title);
+                    }}
+                  />
+                  <Popconfirm
+                    title="Are you sure you want to delete this chat?"
+                    onConfirm={(e) => {
+                      e?.stopPropagation();
+                      handleDeleteChat(chat.id);
+                    }}
+                    onCancel={(e) => e?.stopPropagation()}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </Popconfirm>
+                </Space>
+              )}
             </List.Item>
           )}
         />
@@ -140,7 +259,7 @@ const ChatPageNew = () => {
                 borderRadius: "8px",
               }}
             >
-              {chat.messages?.map((msg: any) => (
+              {chat.messages?.map((msg) => (
                 <Card
                   key={msg.id}
                   size="small"
@@ -151,6 +270,9 @@ const ChatPageNew = () => {
                     backgroundColor:
                       msg.role === "user" ? "#f0f9ff" : "#f6f6f6",
                     border: "none",
+                    // alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+                    // marginLeft: msg.role === "assistant" ? 0 : "auto",
+                    // marginRight: msg.role === "user" ? 0 : "auto",
                   }}
                 >
                   {/* <Text>{msg.content}</Text> */}
@@ -173,12 +295,14 @@ const ChatPageNew = () => {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onPressEnter={handleSend}
+                disabled={!selectedChatId}
               />
               <Button
                 type="primary"
                 icon={<SendOutlined />}
                 onClick={handleSend}
                 loading={sendMessage.isLoading}
+                disabled={!selectedChatId}
               />
             </Space.Compact>
           </>
@@ -194,4 +318,4 @@ const ChatPageNew = () => {
   );
 };
 
-export default ChatPageNew;
+export default ChatPage;

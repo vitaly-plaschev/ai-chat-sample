@@ -159,6 +159,30 @@ async function updateSettings(
   return db.data.settings;
 }
 
+async function updateChatTitle(chatId: string, title: string): Promise<Chat> {
+  if (!db.data) throw new Error("Database not initialized");
+  
+  const chatIndex = db.data.chats.findIndex(c => c.id === chatId);
+  if (chatIndex === -1) throw new Error('Chat not found');
+  
+  db.data.chats[chatIndex].title = title;
+  await db.write();
+  return db.data.chats[chatIndex];
+}
+
+async function deleteChat(chatId: string): Promise<void> {
+  if (!db.data) throw new Error("Database not initialized");
+  
+  const initialLength = db.data.chats.length;
+  db.data.chats = db.data.chats.filter(chat => chat.id !== chatId);
+  
+  if (db.data.chats.length === initialLength) {
+    throw new Error('Chat not found');
+  }
+  
+  await db.write();
+}
+
 export {
   initializeDB,
   createNewChat,
@@ -169,6 +193,8 @@ export {
   createPrompt,
   getSettings,
   updateSettings,
+  updateChatTitle,
+  deleteChat
 };
 
 export type { Chat, Message };

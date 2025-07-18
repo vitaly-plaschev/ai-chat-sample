@@ -4,7 +4,9 @@ import {
   fetchChatById, 
   createNewChat as apiCreateNewChat,
   sendMessage as apiSendMessage,
-  sendPromptToChat
+  sendPromptToChat,
+  updateChatTitle,
+  deleteChat
 } from '../api';
 
 export const useChats = () => {
@@ -59,6 +61,43 @@ export const useSendPromptToChat = () => {
     onSuccess: (data, variables) => {
       // Invalidate the chat query to refetch the updated chat
       queryClient.invalidateQueries({ queryKey: ['chat', variables.chatId] });
+    }
+  });
+};
+
+export const useUpdateChatTitle = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ chatId, title }: { chatId: string; title: string }) => 
+      updateChatTitle(chatId, title),
+    onSuccess: (data, variables) => {
+      // Update the specific chat in the chats list
+      queryClient.setQueryData<Chat[]>(['chats'], (oldChats = []) => 
+        oldChats.map(chat => 
+          chat.id === variables.chatId ? { ...chat, title: variables.title } : chat
+        )
+      );
+      
+      // Invalidate the specific chat query
+      queryClient.invalidateQueries({ queryKey: ['chat', variables.chatId] });
+    }
+  });
+};
+
+export const useDeleteChat = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (chatId: string) => deleteChat(chatId),
+    onSuccess: (_, chatId) => {
+      // Remove the chat from the chats list
+      queryClient.setQueryData<Chat[]>(['chats'], (oldChats = []) => 
+        oldChats.filter(chat => chat.id !== chatId)
+      );
+      
+      // Invalidate the specific chat query
+      queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
     }
   });
 };

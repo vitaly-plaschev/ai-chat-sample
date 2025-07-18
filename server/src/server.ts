@@ -14,6 +14,8 @@ import {
   getSettings,
   createPrompt,
   updateSettings,
+  updateChatTitle,
+  deleteChat,
 } from "./db/database";
 
 dotenv.config();
@@ -250,6 +252,36 @@ app.post('/api/chats/:id/prompt', async (req, res) => {
   } catch (error) {
     console.error('Prompt sending error:', error);
     res.status(500).json({ error: 'Failed to process prompt' });
+  }
+});
+
+app.put('/api/chats/:id', async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title) return res.status(400).json({ error: 'Title is required' });
+    
+    const updatedChat = await updateChatTitle(req.params.id, title);
+    res.json(updatedChat);
+  } catch (error: any) {
+    if (error.message === 'Chat not found') {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to update chat' });
+    }
+  }
+});
+
+// DELETE /api/chats/:id - Delete chat
+app.delete('/api/chats/:id', async (req, res) => {
+  try {
+    await deleteChat(req.params.id);
+    res.json({ message: 'Chat deleted successfully' });
+  } catch (error: any) {
+    if (error.message === 'Chat not found') {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to delete chat' });
+    }
   }
 });
 
