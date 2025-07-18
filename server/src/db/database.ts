@@ -40,7 +40,7 @@ const adapter = new JSONFile<DatabaseSchema>("db.json");
 const db = new Low<DatabaseSchema>(adapter, {
   chats: [],
   prompts: [],
-  settings: { temperature: 0.7, maxTokens: 1000, model: "Giga" },
+  settings: { temperature: 0.7, maxTokens: 1000, model: "GigaChat" },
 });
 
 async function initializeDB() {

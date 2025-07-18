@@ -186,6 +186,73 @@ app.put("/api/settings", async (req, res) => {
   }
 });
 
+app.post('/api/chats/:id/prompt', async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ error: 'Content is required' });
+    
+    // Save user message
+    await addMessageToChat(req.params.id, {
+      role: 'user',
+      content,
+      timestamp: new Date()
+    });
+    
+    // Get access token
+    const token = await getAccessToken();
+    
+    // Get chat history for context
+    const chat = await getChatById(req.params.id);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    
+    // Prepare messages for GigaChat (entire conversation history)
+    const messages = chat.messages.map(m => ({
+      role: m.role,
+      content: m.content
+    }));
+    
+    // Add the new prompt
+    messages.push({
+      role: 'user',
+      content
+    });
+    
+    // Call GigaChat API
+    const response = await axiosInstance.post(
+      process.env.GIGACHAT_API_URL!,
+      {
+        model: 'GigaChat',
+        messages,
+        temperature: chat.settings.temperature || 0.7,
+        max_tokens: chat.settings.maxTokens || 1000
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const aiMessage = response.data.choices[0].message.content;
+    
+    // Save AI response
+    const savedMessage = await addMessageToChat(req.params.id, {
+      role: 'assistant',
+      content: aiMessage,
+      timestamp: new Date()
+    });
+    
+    res.json({
+      userMessage: content,
+      aiMessage: savedMessage
+    });
+  } catch (error) {
+    console.error('Prompt sending error:', error);
+    res.status(500).json({ error: 'Failed to process prompt' });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

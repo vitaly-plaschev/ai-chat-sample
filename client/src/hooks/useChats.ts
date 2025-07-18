@@ -3,7 +3,8 @@ import {
   fetchChats, 
   fetchChatById, 
   createNewChat as apiCreateNewChat,
-  sendMessage as apiSendMessage
+  sendMessage as apiSendMessage,
+  sendPromptToChat
 } from '../api';
 
 export const useChats = () => {
@@ -38,6 +39,26 @@ export const useSendMessage = (chatId: string) => {
     mutationFn: (content: string) => apiSendMessage(chatId, content),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+    }
+  });
+};
+
+// export const useSendPromptToChat = () => {
+//   return useMutation({
+//     mutationFn: ({ chatId, content }: { chatId: string; content: string }) => 
+//       sendPromptToChat(chatId, content)
+//   });
+// };
+
+export const useSendPromptToChat = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ chatId, content }: { chatId: string; content: string }) => 
+      sendPromptToChat(chatId, content),
+    onSuccess: (data, variables) => {
+      // Invalidate the chat query to refetch the updated chat
+      queryClient.invalidateQueries({ queryKey: ['chat', variables.chatId] });
     }
   });
 };

@@ -46,3 +46,8 @@ export const updateSettings = async (settings: Partial<Settings>) => {
   const response = await axios.put(`${API_URL}/settings`, settings);
   return response.data;
 };
+
+export const sendPromptToChat = async (chatId: string, content: string) => {
+  const response = await axios.post(`${API_URL}/chats/${chatId}/prompt`, { content });
+  return response.data;
+};

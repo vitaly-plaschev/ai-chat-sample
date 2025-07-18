@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   List, 
   Button, 
@@ -9,21 +8,27 @@ import {
   Space, 
   message,
   Modal,
-  Popconfirm,
+  Select,
+  Spin,
   Card
 } from 'antd';
 import { PlusOutlined, SendOutlined } from '@ant-design/icons';
 import { usePrompts, useCreatePrompt } from '../hooks/usePrompts';
 import { useChats } from '../hooks/useChats';
+import { useSendPromptToChat } from '../hooks/useChats';
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
+const { Option } = Select;
 
 const PromptsPage = () => {
   const [form] = Form.useForm();
-  const navigate = useNavigate();
+  const [sendModalVisible, setSendModalVisible] = useState(false);
+  const [selectedPrompt, setSelectedPrompt] = useState<{ id: string; content: string } | null>(null);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const { data: prompts, isLoading } = usePrompts();
+  const { data: chats, isLoading: isChatsLoading } = useChats();
   const createPrompt = useCreatePrompt();
-  const { data: chats } = useChats();
+  const sendPrompt = useSendPromptToChat();
 
   const handleCreate = async () => {
     try {
@@ -36,22 +41,24 @@ const PromptsPage = () => {
     }
   };
 
-  const handleSendPrompt = (content: string) => {
-    if (!chats || chats.length === 0) {
-      message.warning('Please create a chat first');
-      return;
-    }
+  const openSendModal = (promptId: string, content: string) => {
+    setSelectedPrompt({ id: promptId, content });
+    setSendModalVisible(true);
+  };
 
-    Modal.confirm({
-      title: 'Send this prompt to chat?',
-      content: content,
-      okText: 'Send',
-      onOk: () => {
-        navigate('/chat');
-        // In a real app, you'd pass the prompt content to the chat page via state
-        message.info('Navigate to chat and paste the prompt manually');
-      }
-    });
+  const handleSendPrompt = async () => {
+    if (!selectedPrompt || !selectedChatId) return;
+    
+    try {
+      await sendPrompt.mutateAsync({ 
+        chatId: selectedChatId, 
+        content: selectedPrompt.content 
+      });
+      message.success('Prompt sent to chat');
+      setSendModalVisible(false);
+    } catch (error) {
+      message.error('Failed to send prompt');
+    }
   };
 
   return (
@@ -100,7 +107,7 @@ const PromptsPage = () => {
                   <Button 
                     type="primary" 
                     icon={<SendOutlined />}
-                    onClick={() => handleSendPrompt(prompt.content)}
+                    onClick={() => openSendModal(prompt.id, prompt.content)}
                   >
                     Send to Chat
                   </Button>
@@ -115,6 +122,39 @@ const PromptsPage = () => {
           />
         </Card>
       </div>
+      
+      {/* Send Prompt Modal */}
+      <Modal
+        title="Send Prompt to Chat"
+        open={sendModalVisible}
+        onCancel={() => setSendModalVisible(false)}
+        onOk={handleSendPrompt}
+        confirmLoading={sendPrompt.isLoading}
+      >
+        {selectedPrompt && (
+          <div style={{ marginBottom: '24px' }}>
+            <Title level={5} style={{ marginBottom: '8px' }}>Prompt:</Title>
+            <Text>{selectedPrompt.content}</Text>
+          </div>
+        )}
+        
+        <Form layout="vertical">
+          <Form.Item label="Select Chat" required>
+            <Select
+              placeholder="Choose a chat to send to"
+              value={selectedChatId}
+              onChange={setSelectedChatId}
+              loading={isChatsLoading}
+            >
+              {chats?.map(chat => (
+                <Option key={chat.id} value={chat.id}>
+                  {chat.title}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

@@ -19,10 +19,13 @@ import {
   useCreateChat,
 } from "../hooks/useChats";
 import { usePrompts } from "../hooks/usePrompts";
+import { useQueryClient } from "@tanstack/react-query";
+import MarkdownRenderer from "../components/MarkdownRenderer";
 
 const { Text } = Typography;
 
 const ChatPageNew = () => {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const { data: chats, isLoading: isChatsLoading } = useChats();
@@ -40,6 +43,17 @@ const ChatPageNew = () => {
       setSelectedChatId(chats[0].id);
     }
   }, [chats, selectedChatId]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      if (selectedChatId) {
+        queryClient.invalidateQueries({ queryKey: ["chat", selectedChatId] });
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [selectedChatId, queryClient]);
 
   const promptItems = prompts?.map((prompt) => ({
     key: prompt.id,
@@ -139,7 +153,8 @@ const ChatPageNew = () => {
                     border: "none",
                   }}
                 >
-                  <Text>{msg.content}</Text>
+                  {/* <Text>{msg.content}</Text> */}
+                  <MarkdownRenderer content={msg.content} />
                   <div style={{ textAlign: "right" }}>
                     <Text type="secondary" style={{ fontSize: "12px" }}>
                       {new Date(msg.timestamp).toLocaleTimeString()}
