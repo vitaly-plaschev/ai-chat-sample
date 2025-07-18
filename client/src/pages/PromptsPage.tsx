@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   List, 
   Button, 
@@ -7,20 +8,22 @@ import {
   Typography, 
   Space, 
   message,
-  Modal
+  Modal,
+  Popconfirm,
+  Card
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, SendOutlined } from '@ant-design/icons';
 import { usePrompts, useCreatePrompt } from '../hooks/usePrompts';
-import { useSendMessage } from '../hooks/useChats';
+import { useChats } from '../hooks/useChats';
 
 const { Text } = Typography;
 
 const PromptsPage = () => {
   const [form] = Form.useForm();
-  const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
+  const navigate = useNavigate();
   const { data: prompts, isLoading } = usePrompts();
   const createPrompt = useCreatePrompt();
-  const sendMessage = useSendMessage(selectedPrompt || '');
+  const { data: chats } = useChats();
 
   const handleCreate = async () => {
     try {
@@ -33,56 +36,84 @@ const PromptsPage = () => {
     }
   };
 
-  const handleSendPrompt = async (content: string) => {
+  const handleSendPrompt = (content: string) => {
+    if (!chats || chats.length === 0) {
+      message.warning('Please create a chat first');
+      return;
+    }
+
     Modal.confirm({
       title: 'Send this prompt to chat?',
       content: content,
-      onOk: async () => {
-        await sendMessage.mutateAsync(content);
-        message.success('Prompt sent to chat');
+      okText: 'Send',
+      onOk: () => {
+        navigate('/chat');
+        // In a real app, you'd pass the prompt content to the chat page via state
+        message.info('Navigate to chat and paste the prompt manually');
       }
     });
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
-      <div style={{ width: '300px', marginRight: '16px' }}>
-        <Form form={form} layout="vertical">
-          <Form.Item name="title" label="Title" rules={[{ required: true }]}>
-            <Input placeholder="Prompt title" />
-          </Form.Item>
-          <Form.Item name="content" label="Content" rules={[{ required: true }]}>
-            <Input.TextArea rows={6} placeholder="Prompt content" />
-          </Form.Item>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
-            onClick={handleCreate}
-          >
-            Add Prompt
-          </Button>
-        </Form>
+    <div style={{ display: 'flex', height: '100%', gap: '24px' }}>
+      <div style={{ width: '350px' }}>
+        <Card title="Create New Prompt" style={{ marginBottom: '24px' }}>
+          <Form form={form} layout="vertical">
+            <Form.Item 
+              name="title" 
+              label="Title" 
+              rules={[{ required: true, message: 'Please enter a title' }]}
+            >
+              <Input placeholder="Enter prompt title" />
+            </Form.Item>
+            <Form.Item 
+              name="content" 
+              label="Content" 
+              rules={[{ required: true, message: 'Please enter content' }]}
+            >
+              <Input.TextArea 
+                rows={6} 
+                placeholder="Enter prompt content" 
+                style={{ resize: 'none' }}
+              />
+            </Form.Item>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={handleCreate}
+              block
+            >
+              Add Prompt
+            </Button>
+          </Form>
+        </Card>
       </div>
       
-      <div style={{ flex: 1, overflow: 'auto' }}>
-        <List
-          loading={isLoading}
-          dataSource={prompts}
-          renderItem={(prompt: any) => (
-            <List.Item
-              actions={[
-                <Button onClick={() => handleSendPrompt(prompt.content)}>
-                  Send to Chat
-                </Button>
-              ]}
-            >
-              <List.Item.Meta
-                title={<Text strong>{prompt.title}</Text>}
-                description={<Text>{prompt.content}</Text>}
-              />
-            </List.Item>
-          )}
-        />
+      <div style={{ flex: 1 }}>
+        <Card title="Saved Prompts">
+          <List
+            loading={isLoading}
+            dataSource={prompts}
+            renderItem={prompt => (
+              <List.Item
+                actions={[
+                  <Button 
+                    type="primary" 
+                    icon={<SendOutlined />}
+                    onClick={() => handleSendPrompt(prompt.content)}
+                  >
+                    Send to Chat
+                  </Button>
+                ]}
+              >
+                <List.Item.Meta
+                  title={<Text strong>{prompt.title}</Text>}
+                  description={<Text>{prompt.content}</Text>}
+                />
+              </List.Item>
+            )}
+          />
+        </Card>
       </div>
     </div>
   );
